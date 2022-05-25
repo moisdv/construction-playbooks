@@ -1,0 +1,29 @@
+# Playbook orientado a la Instalación de Agente Zabbix
+# Inicio de Playbook
+---
+- name: Zabbix Agent Installation via RPM
+  hosts: local_server
+  become: true
+  vars:
+    server_name: "{{ ansible_facts['fqdn'] }}"
+  tasks:
+    - name: Add Server value
+      lineinfile:
+        path: /etc/zabbix/zabbix_agentd.conf
+        regexp: "Server=127.0.0.1"
+        line: "Server=10.10.10.10"
+        state: present
+
+    - name: Add ServerActive value
+      lineinfile:
+        path: /etc/zabbix/zabbix_agentd.conf
+        regexp: "ServerActive=127.0.0.1"
+        line: "ServerActive=10.10.10.10"
+        state: present
+
+    - name: Add Hostname value
+      lineinfile:
+        path: /etc/zabbix/zabbix_agentd.conf
+        regexp: "Hostname=localhost"
+        line: "Hostname: {{ server_name }}"
+        state: present
