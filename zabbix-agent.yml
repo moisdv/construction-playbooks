@@ -2,11 +2,46 @@
 # Inicio de Playbook
 ---
 - name: Zabbix Agent Installation via RPM
-  hosts: local_server
+  hosts: localhost
   become: true
   vars:
     server_name: "{{ ansible_facts['fqdn'] }}"
+    zabbix_svc: zabbix-agent.service
   tasks:
+    # USER CREATION SECTION
+    - name: Creating Zabbix user
+      user:
+        name: zabbix
+        password: NPgy30<?5/6
+        shell: /bin/bash
+        comment: "Zabbix user for agent control"
+        home: /home/zabbix
+
+    - name: Chages over Zabbix user
+      command: chage -I -1 -m 0 -M 99999 -E -1 zabbix 
+    
+    # ZABBIX PACKAGE INSTALLATION SECTION
+    - name: Getting zabbix agent package
+      block:
+        - name: First method to get repos
+          dnf:
+            name: https://repo.zabbix.com/zabbix/5.2/rhel/8/x86_64/zabbix-release-5.2-1.el8.noarch.rpm
+      rescue:
+        - name: Second method to get repos
+          command: rpm -Uvh https://repo.zabbix.com/zabbix/5.2/rhel/8/x86_64/zabbix-release-5.2-1.el8.noarch.rpm 
+          register: second_output
+
+    - name: Zabbix-Agent validation
+      command: rpm -qa | grep zabbix
+      register: installation_output
+      ignore_errors: yes
+
+    - name: Zabbix-Agent not installed
+      debug:
+        var: "Zabbix no se encuentra instalado en el host"
+      failed_when: installation_output.rc == 1
+    
+    # ZABBIX AGENT CONFIGURATION FILE MODIFICATION
     - name: Add Server value
       lineinfile:
         path: /etc/zabbix/zabbix_agentd.conf
@@ -27,3 +62,10 @@
         regexp: "Hostname=localhost"
         line: "Hostname: {{ server_name }}"
         state: present
+
+    # ENABLING AND STARTING ZABBIX-AGENT SERVICE
+    - name: Starting Zabbix-Agent service
+      service:
+        name: "{{ zabbix_svc }}"
+        enabled: true
+        state: started
